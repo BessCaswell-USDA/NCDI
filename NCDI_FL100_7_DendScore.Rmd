@@ -1,0 +1,85 @@
+---
+title: "NCDI_FL100_DendScore"
+author: "Zachary Gersten"
+date: "January 2026"
+---
+
+# NCDI_FL100_DendScore: Builds the food dendrogram for unique ingredients after the FNDDS4.1 and 2011-2012 versions were merged
+
+__Required Input Files__
+  - *FNDDS_nutrienttraitmatrix_serv* - Nutrient trait matrix
+  - *individualfoodmatrix_recall#* - Individual food consumption matrix for specific recalls
+
+__Information__
+This script ...
+
+  1) Reads in the food-nutrient trait matrix, selects nutrient traits
+  2) Calculates the Euclidean distances between each food and stores values in a distance matrix
+  3) Clusters foods and creates a dendrogram
+  4) Calculates the total NCDI score
+  4) Calculates the raw individual NCDI scores
+
+__Output__
+  - fooddistancematrix.csv
+  - fooddendrogram.jpeg
+  
+```{r Load packages, include= FALSE, warning=FALSE, message=FALSE}
+library(vegan)
+library(readxl)
+library(tidyverse)
+library(writexl)
+library(dendextend)
+library(circlize)
+library(ggplot2)
+library(ggdendro)
+```  
+  
+```{r Set working directory} 
+setwd("C:/Users/zachary.gersten...")
+```   
+
+```{r Load Data, include=FALSE, make the row name}
+foodnutrienttrait <- read_csv("FNDDS_nutrienttraitmatrix_codes.csv")
+foodnutrtrait_frame <- as.data.frame(foodnutrienttrait)
+rownames(foodnutrtrait_frame) <- foodnutrtrait_frame$ingredientcode_fndds
+foodnutrtrait_frame <- foodnutrtrait_frame[, -1]
+```
+
+```{r Create distance matrix}
+fooddistancematrix <- vegdist(foodnutrtrait_frame, method="euclidean")
+write.csv(fooddistancematrix, "fooddistancematrix.csv")
+```
+
+```{r Hierarchal cluster of food distance matrix}  
+foodclusters <- hclust(fooddistancematrix, method = "average")
+jpeg(file = 'foodtree.jpg', quality = 100, width = 2000, height = 1000)
+plot(foodclusters, hang = -1, cex = 1)
+```
+
+```{r Find the sum of the lengths of the connecting segments in a dendrogram}
+treeheight(foodclusters)
+```
+
+```{r Load Data, include=FALSE}
+dietrecall2 <- read_csv("individualfoodmatrix_recall2.csv")
+dietrecall2_frame <- as.data.frame(dietrecall2)
+rownames(dietrecall2_frame) <- dietrecall2_frame$UserID
+dietrecall2_frame <- dietrecall2_frame[, -1]
+```
+
+```{r Load Data, include=FALSE}
+dietrecall3 <- read_csv("individualfoodmatrix_recall3.csv")
+dietrecall3_frame <- as.data.frame(dietrecall3)
+rownames(dietrecall3_frame) <- dietrecall3_frame$UserID
+dietrecall3_frame <- dietrecall3_frame[, -1]
+```
+
+```{r Find the tree height (raw NCDI score) for each FL100 participant recall 2}
+rawscorerecall2 <- treedive(dietrecall2_frame, foodclusters)
+write.csv(rawscorerecall2, "rawNCDIscorerecall2.csv")
+```
+
+```{r Find the tree height (raw NCDI score) for each FL100 participant recall 3}
+rawscorerecall3 <- treedive(dietrecall3_frame, foodclusters)
+write.csv(rawscorerecall3, "rawNCDIscorerecall3.csv")
+```
